@@ -35,6 +35,8 @@ export default function Home() {
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
     defaultValues: {
+      projectName: "",
+      description: "",
       projectType: "web",
       requirements: {
         performance: false,
