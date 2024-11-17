@@ -84,6 +84,11 @@ export function FrameworkComparison({ projectType }: FrameworkComparisonProps) {
   const availableFrameworks = Object.entries(frameworks[projectType]);
 
   const handleFrameworkSelect = (index: number, value: string) => {
+    const otherIndex = index === 0 ? 1 : 0;
+    // Don't allow selecting the same framework
+    if (selectedFrameworks[otherIndex] === value) {
+      return;
+    }
     const newSelected = [...selectedFrameworks];
     newSelected[index] = value;
     setSelectedFrameworks(newSelected);
@@ -114,7 +119,11 @@ export function FrameworkComparison({ projectType }: FrameworkComparisonProps) {
               </SelectTrigger>
               <SelectContent>
                 {availableFrameworks.map(([key, framework]) => (
-                  <SelectItem key={key} value={key}>
+                  <SelectItem 
+                    key={key} 
+                    value={key}
+                    disabled={selectedFrameworks[index === 0 ? 1 : 0] === key}
+                  >
                     {framework.name}
                   </SelectItem>
                 ))}
