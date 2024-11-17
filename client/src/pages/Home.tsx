@@ -17,6 +17,7 @@ import { findTemplatesByType, getTemplateBoilerplate } from "../lib/templates";
 import { RequirementsVisualization } from "../components/RequirementsVisualization";
 import { StatsVisualization } from "../components/StatsVisualization";
 import { FrameworkComparison } from "../components/FrameworkComparison";
+import { PromptHistory } from "../components/PromptHistory";
 import useSWR, { mutate } from "swr";
 
 const formSchema = z.object({
@@ -78,7 +79,7 @@ export default function Home() {
       setPrompt(finalPrompt);
 
       // Save recommendation to the database
-      const response = await fetch('/api/recommendations', {
+      const recommendationResponse = await fetch('/api/recommendations', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -86,18 +87,39 @@ export default function Home() {
         body: JSON.stringify({
           projectType: data.projectType,
           requirements: data.requirements,
-          recommendedFramework: result.recommendation.split(' ')[0], // Extract framework name
+          recommendedFramework: result.recommendation.split(' ')[0],
         }),
       });
 
-      if (!response.ok) {
+      if (!recommendationResponse.ok) {
         throw new Error('Failed to save recommendation');
       }
 
-      // Invalidate stats cache
-      mutate('/api/recommendations/stats');
+      // Save prompt to history
+      const promptResponse = await fetch('/api/prompts', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          projectName: data.projectName,
+          projectType: data.projectType,
+          description: data.description,
+          requirements: data.requirements,
+          prompt: finalPrompt,
+          recommendation: result.recommendation,
+        }),
+      });
 
-      // Switch to recommendation tab after getting results
+      if (!promptResponse.ok) {
+        throw new Error('Failed to save prompt');
+      }
+
+      // Invalidate caches
+      mutate('/api/recommendations/stats');
+      mutate('/api/prompts');
+
+      // Switch to recommendation tab
       const tabsList = document.querySelector('[value="recommendation"]');
       if (tabsList) {
         (tabsList as HTMLElement).click();
@@ -140,6 +162,15 @@ export default function Home() {
     }
   };
 
+  const loadPromptTemplate = (template: any) => {
+    form.reset({
+      projectName: template.projectName,
+      description: template.description,
+      projectType: template.projectType,
+      requirements: template.requirements,
+    });
+  };
+
   if (statsError) {
     console.error('Failed to fetch stats:', statsError);
   }
@@ -157,9 +188,10 @@ export default function Home() {
       )}
 
       <Tabs defaultValue="form" className="w-full">
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="form">Project Details</TabsTrigger>
           <TabsTrigger value="comparison">Compare Frameworks</TabsTrigger>
+          <TabsTrigger value="history">History</TabsTrigger>
           <TabsTrigger value="recommendation" disabled={!recommendation}>
             Recommendation
           </TabsTrigger>
@@ -357,6 +389,10 @@ export default function Home() {
 
         <TabsContent value="comparison">
           <FrameworkComparison projectType={form.watch("projectType") || "web"} />
+        </TabsContent>
+
+        <TabsContent value="history">
+          <PromptHistory onSelectPrompt={loadPromptTemplate} />
         </TabsContent>
 
         <TabsContent value="recommendation">

@@ -1,6 +1,6 @@
 import type { Express } from "express";
 import { db } from "../db";
-import { recommendations } from "../db/schema";
+import { recommendations, promptHistory } from "../db/schema";
 
 export function registerRoutes(app: Express) {
   // Save framework recommendations for future analysis
@@ -35,6 +35,38 @@ export function registerRoutes(app: Express) {
     } catch (error) {
       console.error("Error fetching stats:", error);
       res.status(500).json({ error: "Failed to fetch statistics" });
+    }
+  });
+
+  // Save prompt history
+  app.post("/api/prompts", async (req, res) => {
+    try {
+      const { projectName, projectType, description, requirements, prompt, recommendation } = req.body;
+      const result = await db.insert(promptHistory).values({
+        projectName,
+        projectType,
+        description,
+        requirements,
+        prompt,
+        recommendation,
+        createdAt: new Date().toISOString(),
+      }).returning();
+      
+      res.json(result[0]);
+    } catch (error) {
+      console.error("Error saving prompt:", error);
+      res.status(500).json({ error: "Failed to save prompt" });
+    }
+  });
+
+  // Get prompt history
+  app.get("/api/prompts", async (_req, res) => {
+    try {
+      const history = await db.select().from(promptHistory).orderBy(promptHistory.createdAt);
+      res.json(history);
+    } catch (error) {
+      console.error("Error fetching prompt history:", error);
+      res.status(500).json({ error: "Failed to fetch prompt history" });
     }
   });
 }

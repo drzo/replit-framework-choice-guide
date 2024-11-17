@@ -12,7 +12,24 @@ export const recommendations = pgTable("recommendations", {
   createdAt: text("created_at").notNull().default("NOW()"),
 });
 
+// Store prompt history
+export const promptHistory = pgTable("prompt_history", {
+  id: integer().primaryKey().generatedAlwaysAsIdentity(),
+  projectName: text("project_name").notNull(),
+  projectType: text("project_type").notNull(),
+  description: text("description").notNull(),
+  requirements: jsonb("requirements").notNull(),
+  prompt: text("prompt").notNull(),
+  recommendation: text("recommendation").notNull(),
+  createdAt: text("created_at").notNull().default("NOW()"),
+});
+
 export const insertRecommendationSchema = createInsertSchema(recommendations);
 export const selectRecommendationSchema = createSelectSchema(recommendations);
+export const insertPromptHistorySchema = createInsertSchema(promptHistory);
+export const selectPromptHistorySchema = createSelectSchema(promptHistory);
+
 export type InsertRecommendation = z.infer<typeof insertRecommendationSchema>;
 export type Recommendation = z.infer<typeof selectRecommendationSchema>;
+export type InsertPromptHistory = z.infer<typeof insertPromptHistorySchema>;
+export type PromptHistory = z.infer<typeof selectPromptHistorySchema>;
