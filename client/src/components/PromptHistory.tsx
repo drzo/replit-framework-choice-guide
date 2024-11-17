@@ -1,6 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Copy } from "lucide-react";
+import { Copy, RefreshCcw } from "lucide-react";
 import useSWR from "swr";
 import { useToast } from "@/hooks/use-toast";
 
@@ -26,7 +26,24 @@ interface PromptHistoryItem {
 
 export function PromptHistory({ onSelectPrompt }: PromptHistoryProps) {
   const { toast } = useToast();
-  const { data: history, error } = useSWR<PromptHistoryItem[]>('/api/prompts');
+  const { data: history, error, isLoading, mutate } = useSWR<PromptHistoryItem[]>(
+    '/api/prompts',
+    {
+      revalidateOnFocus: false,
+      revalidateOnReconnect: false,
+      shouldRetryOnError: true,
+      errorRetryCount: 3,
+      errorRetryInterval: 5000,
+      onError: (err) => {
+        console.error('Failed to fetch prompt history:', err);
+        toast({
+          title: "Error",
+          description: err.info?.details || "Failed to load prompt history. Please try again.",
+          variant: "destructive",
+        });
+      }
+    }
+  );
 
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
@@ -36,13 +53,61 @@ export function PromptHistory({ onSelectPrompt }: PromptHistoryProps) {
     });
   };
 
+  const handleRetry = () => {
+    mutate();
+    toast({
+      title: "Retrying",
+      description: "Attempting to reload prompt history...",
+    });
+  };
+
   if (error) {
-    console.error('Failed to fetch prompt history:', error);
-    return <div>Failed to load prompt history</div>;
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Prompt History</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="text-center py-8">
+            <p className="text-destructive mb-4">Failed to load prompt history</p>
+            <Button onClick={handleRetry} variant="outline">
+              <RefreshCcw className="mr-2 h-4 w-4" />
+              Retry
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    );
   }
 
-  if (!history) {
-    return <div>Loading prompt history...</div>;
+  if (isLoading) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Prompt History</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="text-center py-8">
+            <p className="text-muted-foreground">Loading prompt history...</p>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (!history?.length) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Prompt History</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="text-center py-8">
+            <p className="text-muted-foreground">No prompts saved yet.</p>
+          </div>
+        </CardContent>
+      </Card>
+    );
   }
 
   return (

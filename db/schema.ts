@@ -1,20 +1,20 @@
-import { pgTable, text, integer, jsonb } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, jsonb } from "drizzle-orm/pg-core";
 import { createInsertSchema, createSelectSchema } from "drizzle-zod";
 import { z } from "zod";
 
 // Store framework recommendations for future machine learning
 export const recommendations = pgTable("recommendations", {
-  id: integer().primaryKey().generatedAlwaysAsIdentity(),
+  id: serial("id").primaryKey(),
   projectType: text("project_type").notNull(),
   requirements: jsonb("requirements").notNull(),
   recommendedFramework: text("recommended_framework").notNull(),
-  userFeedback: integer("user_feedback"), // 1-5 rating
+  userFeedback: serial("user_feedback"), // 1-5 rating
   createdAt: text("created_at").notNull().default("NOW()"),
 });
 
 // Store prompt history
 export const promptHistory = pgTable("prompt_history", {
-  id: integer().primaryKey().generatedAlwaysAsIdentity(),
+  id: serial("id").primaryKey(),
   projectName: text("project_name").notNull(),
   projectType: text("project_type").notNull(),
   description: text("description").notNull(),
