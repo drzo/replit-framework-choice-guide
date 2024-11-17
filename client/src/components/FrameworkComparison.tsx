@@ -129,32 +129,32 @@ export function FrameworkComparison({ projectType }: FrameworkComparisonProps) {
               <TableRow>
                 <TableHead>Feature</TableHead>
                 {selectedFrameworks.map((fw) => (
-                  <TableHead key={fw}>{frameworks[projectType][fw].name}</TableHead>
+                  <TableHead key={`header-${fw}`}>{frameworks[projectType][fw].name}</TableHead>
                 ))}
               </TableRow>
             </TableHeader>
             <TableBody>
-              <TableRow>
+              <TableRow key="description-row">
                 <TableCell className="font-medium">Description</TableCell>
                 {selectedFrameworks.map((fw) => (
-                  <TableCell key={fw}>{frameworks[projectType][fw].description}</TableCell>
+                  <TableCell key={`description-${fw}`}>{frameworks[projectType][fw].description}</TableCell>
                 ))}
               </TableRow>
-              <TableRow>
+              <TableRow key="strengths-row">
                 <TableCell className="font-medium">Key Strengths</TableCell>
                 {selectedFrameworks.map((fw) => (
-                  <TableCell key={fw}>
+                  <TableCell key={`strengths-${fw}`}>
                     {frameworks[projectType][fw].strengths.join(", ")}
                   </TableCell>
                 ))}
               </TableRow>
               {getFeatureKeys().map((feature) => (
-                <TableRow key={feature}>
+                <TableRow key={`feature-${feature}`}>
                   <TableCell className="font-medium">
                     {feature.replace(/([A-Z])/g, ' $1').trim()}
                   </TableCell>
                   {selectedFrameworks.map((fw) => (
-                    <TableCell key={fw}>
+                    <TableCell key={`${fw}-${feature}`}>
                       {typeof frameworks[projectType][fw].features[feature] === 'boolean'
                         ? frameworks[projectType][fw].features[feature] ? '✓' : '✗'
                         : frameworks[projectType][fw].features[feature]}
