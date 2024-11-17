@@ -14,6 +14,8 @@ import { useToast } from "@/hooks/use-toast";
 import { CheckCircle, Copy, Sparkles } from "lucide-react";
 import { evaluateFramework } from "../lib/framework-logic";
 import { findTemplatesByType, getTemplateBoilerplate } from "../lib/templates";
+import { RequirementsVisualization } from "../components/RequirementsVisualization";
+import { StatsVisualization } from "../components/StatsVisualization";
 import useSWR, { mutate } from "swr";
 
 const formSchema = z.object({
@@ -148,14 +150,8 @@ export default function Home() {
       </h1>
 
       {stats && (
-        <div className="mb-6 text-sm text-muted-foreground">
-          <p>Total recommendations: {stats.total}</p>
-          <p>Popular frameworks: {Object.entries(stats.byFramework)
-            .sort(([,a], [,b]) => (b as number) - (a as number))
-            .slice(0, 3)
-            .map(([framework]) => framework)
-            .join(', ')}
-          </p>
+        <div className="mb-6">
+          <StatsVisualization stats={stats} />
         </div>
       )}
 
@@ -272,75 +268,80 @@ export default function Home() {
 
                 <div className="space-y-4">
                   <h3 className="font-medium">Project Requirements</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <FormField
-                      control={form.control}
-                      name="requirements.performance"
-                      render={({ field }) => (
-                        <FormItem className="flex items-center space-x-2">
-                          <FormControl>
-                            <Checkbox
-                              checked={field.value}
-                              onCheckedChange={field.onChange}
-                            />
-                          </FormControl>
-                          <FormLabel className="text-sm font-normal">
-                            High Performance
-                          </FormLabel>
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name="requirements.scalability"
-                      render={({ field }) => (
-                        <FormItem className="flex items-center space-x-2">
-                          <FormControl>
-                            <Checkbox
-                              checked={field.value}
-                              onCheckedChange={field.onChange}
-                            />
-                          </FormControl>
-                          <FormLabel className="text-sm font-normal">
-                            Scalability
-                          </FormLabel>
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name="requirements.easeOfUse"
-                      render={({ field }) => (
-                        <FormItem className="flex items-center space-x-2">
-                          <FormControl>
-                            <Checkbox
-                              checked={field.value}
-                              onCheckedChange={field.onChange}
-                            />
-                          </FormControl>
-                          <FormLabel className="text-sm font-normal">
-                            Ease of Use
-                          </FormLabel>
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name="requirements.ecosystem"
-                      render={({ field }) => (
-                        <FormItem className="flex items-center space-x-2">
-                          <FormControl>
-                            <Checkbox
-                              checked={field.value}
-                              onCheckedChange={field.onChange}
-                            />
-                          </FormControl>
-                          <FormLabel className="text-sm font-normal">
-                            Rich Ecosystem
-                          </FormLabel>
-                        </FormItem>
-                      )}
-                    />
+                  <div className="grid grid-cols-1 gap-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <FormField
+                        control={form.control}
+                        name="requirements.performance"
+                        render={({ field }) => (
+                          <FormItem className="flex items-center space-x-2">
+                            <FormControl>
+                              <Checkbox
+                                checked={field.value}
+                                onCheckedChange={field.onChange}
+                              />
+                            </FormControl>
+                            <FormLabel className="text-sm font-normal">
+                              High Performance
+                            </FormLabel>
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="requirements.scalability"
+                        render={({ field }) => (
+                          <FormItem className="flex items-center space-x-2">
+                            <FormControl>
+                              <Checkbox
+                                checked={field.value}
+                                onCheckedChange={field.onChange}
+                              />
+                            </FormControl>
+                            <FormLabel className="text-sm font-normal">
+                              Scalability
+                            </FormLabel>
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="requirements.easeOfUse"
+                        render={({ field }) => (
+                          <FormItem className="flex items-center space-x-2">
+                            <FormControl>
+                              <Checkbox
+                                checked={field.value}
+                                onCheckedChange={field.onChange}
+                              />
+                            </FormControl>
+                            <FormLabel className="text-sm font-normal">
+                              Ease of Use
+                            </FormLabel>
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="requirements.ecosystem"
+                        render={({ field }) => (
+                          <FormItem className="flex items-center space-x-2">
+                            <FormControl>
+                              <Checkbox
+                                checked={field.value}
+                                onCheckedChange={field.onChange}
+                              />
+                            </FormControl>
+                            <FormLabel className="text-sm font-normal">
+                              Rich Ecosystem
+                            </FormLabel>
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                    
+                    {/* Add requirements visualization */}
+                    <RequirementsVisualization requirements={form.watch('requirements')} />
                   </div>
                 </div>
 
