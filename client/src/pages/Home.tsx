@@ -16,6 +16,7 @@ import { evaluateFramework } from "../lib/framework-logic";
 import { findTemplatesByType, getTemplateBoilerplate } from "../lib/templates";
 import { RequirementsVisualization } from "../components/RequirementsVisualization";
 import { StatsVisualization } from "../components/StatsVisualization";
+import { FrameworkComparison } from "../components/FrameworkComparison";
 import useSWR, { mutate } from "swr";
 
 const formSchema = z.object({
@@ -156,8 +157,9 @@ export default function Home() {
       )}
 
       <Tabs defaultValue="form" className="w-full">
-        <TabsList className="grid w-full grid-cols-2">
+        <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="form">Project Details</TabsTrigger>
+          <TabsTrigger value="comparison">Compare Frameworks</TabsTrigger>
           <TabsTrigger value="recommendation" disabled={!recommendation}>
             Recommendation
           </TabsTrigger>
@@ -351,6 +353,10 @@ export default function Home() {
               </form>
             </Form>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="comparison">
+          <FrameworkComparison projectType={form.watch("projectType") || "web"} />
         </TabsContent>
 
         <TabsContent value="recommendation">
