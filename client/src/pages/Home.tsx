@@ -11,14 +11,16 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
-import { CheckCircle, Copy } from "lucide-react";
+import { CheckCircle, Copy, Sparkles } from "lucide-react";
 import { evaluateFramework } from "../lib/framework-logic";
+import { findTemplatesByType, getTemplateBoilerplate } from "../lib/templates";
 import useSWR, { mutate } from "swr";
 
 const formSchema = z.object({
   projectName: z.string().min(1, "Project name is required"),
   description: z.string().min(10, "Please provide more details about your project"),
   projectType: z.enum(["web", "api", "cli", "mobile"]),
+  template: z.string().optional(),
   requirements: z.object({
     performance: z.boolean().default(false),
     scalability: z.boolean().default(false),
@@ -34,6 +36,7 @@ export default function Home() {
   const [recommendation, setRecommendation] = useState<string | null>(null);
   const [prompt, setPrompt] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [availableTemplates, setAvailableTemplates] = useState(findTemplatesByType("web"));
   
   // Fetch recommendation stats
   const { data: stats, error: statsError } = useSWR('/api/recommendations/stats');
@@ -44,6 +47,7 @@ export default function Home() {
       projectName: "",
       description: "",
       projectType: "web",
+      template: undefined,
       requirements: {
         performance: false,
         scalability: false,
@@ -57,8 +61,18 @@ export default function Home() {
     setIsLoading(true);
     try {
       const result = evaluateFramework(data);
+      let finalPrompt = result.prompt;
+
+      // If a template was selected, append its boilerplate
+      if (data.template) {
+        const templateBoilerplate = getTemplateBoilerplate(data.template);
+        if (templateBoilerplate) {
+          finalPrompt += "\n\nTemplate specific requirements:\n" + templateBoilerplate;
+        }
+      }
+
       setRecommendation(result.recommendation);
-      setPrompt(result.prompt);
+      setPrompt(finalPrompt);
 
       // Save recommendation to the database
       const response = await fetch('/api/recommendations', {
@@ -108,6 +122,19 @@ export default function Home() {
       title: "Copied to clipboard",
       description: "You can now paste the prompt in Replit Agent",
     });
+  };
+
+  const handleProjectTypeChange = (type: string) => {
+    form.setValue("projectType", type as "web" | "api" | "cli" | "mobile");
+    setAvailableTemplates(findTemplatesByType(type));
+    form.setValue("template", undefined); // Reset template when type changes
+  };
+
+  const handleTemplateSelect = (templateName: string) => {
+    const template = availableTemplates.find(t => t.name === templateName);
+    if (template) {
+      form.setValue("requirements", template.requirements);
+    }
   };
 
   if (statsError) {
@@ -181,7 +208,10 @@ export default function Home() {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Project Type</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <Select
+                        onValueChange={(value) => handleProjectTypeChange(value)}
+                        defaultValue={field.value}
+                      >
                         <FormControl>
                           <SelectTrigger>
                             <SelectValue placeholder="Select project type" />
@@ -198,6 +228,47 @@ export default function Home() {
                     </FormItem>
                   )}
                 />
+
+                {availableTemplates.length > 0 && (
+                  <FormField
+                    control={form.control}
+                    name="template"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>
+                          <span className="flex items-center gap-2">
+                            Project Template
+                            <Sparkles className="h-4 w-4 text-primary" />
+                          </span>
+                        </FormLabel>
+                        <Select
+                          onValueChange={(value) => {
+                            field.onChange(value);
+                            handleTemplateSelect(value);
+                          }}
+                          value={field.value}
+                        >
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select a template" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {availableTemplates.map((template) => (
+                              <SelectItem key={template.name} value={template.name}>
+                                {template.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <p className="text-sm text-muted-foreground">
+                          {field.value && availableTemplates.find(t => t.name === field.value)?.description}
+                        </p>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                )}
 
                 <div className="space-y-4">
                   <h3 className="font-medium">Project Requirements</h3>
