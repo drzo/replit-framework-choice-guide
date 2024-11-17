@@ -8,37 +8,55 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
 (async () => {
-  registerRoutes(app);
-  const server = createServer(app);
+  try {
+    console.log("Initializing server...");
+    registerRoutes(app);
+    const server = createServer(app);
 
-  app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
-    const status = err.status || err.statusCode || 500;
-    const message = err.message || "Internal Server Error";
-
-    res.status(status).json({ message });
-    throw err;
-  });
-
-  // importantly only setup vite in development and after
-  // setting up all the other routes so the catch-all route
-  // doesn't interfere with the other routes
-  if (app.get("env") === "development") {
-    await setupVite(app, server);
-  } else {
-    serveStatic(app);
-  }
-
-  // ALWAYS serve the app on port 5000
-  // this serves both the API and the client
-  const PORT = 5000;
-  server.listen(PORT, "0.0.0.0", () => {
-    const formattedTime = new Date().toLocaleTimeString("en-US", {
-      hour: "2-digit",
-      minute: "2-digit",
-      second: "2-digit",
-      hour12: true,
+    app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
+      console.error('Server error:', err);
+      const status = err.status || err.statusCode || 500;
+      const message = err.message || "Internal Server Error";
+      res.status(status).json({ message });
     });
 
-    console.log(`${formattedTime} [express] serving on port ${PORT}`);
-  });
+    console.log("Setting up environment...");
+    if (app.get("env") === "development") {
+      console.log("Setting up Vite in development mode...");
+      await setupVite(app, server);
+    } else {
+      console.log("Setting up static serving...");
+      serveStatic(app);
+    }
+
+    const PORT = process.env.PORT || 5000;
+    console.log(`Attempting to start server on port ${PORT}...`);
+    
+    server.listen(PORT, "0.0.0.0", () => {
+      const formattedTime = new Date().toLocaleTimeString("en-US", {
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+        hour12: true,
+      });
+      console.log(`${formattedTime} [express] Server started successfully on port ${PORT}`);
+    });
+
+    server.on('error', (error: NodeJS.ErrnoException) => {
+      if (error.code === 'EADDRINUSE') {
+        console.error(`Error: Port ${PORT} is already in use. Please try a different port or terminate the process using this port.`);
+        process.exit(1);
+      } else if (error.code === 'EACCES') {
+        console.error(`Error: No permission to bind to port ${PORT}. Try using a port number > 1024 or running with elevated privileges.`);
+        process.exit(1);
+      } else {
+        console.error('Server error:', error);
+        process.exit(1);
+      }
+    });
+
+  } catch (error) {
+    console.error('Failed to start server:', error);
+    process.exit(1);
+  }
 })();

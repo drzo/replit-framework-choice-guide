@@ -9,9 +9,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import { CheckCircle, Copy } from "lucide-react";
 import { evaluateFramework } from "../lib/framework-logic";
+import useSWR, { mutate } from "swr";
 
 const formSchema = z.object({
   projectName: z.string().min(1, "Project name is required"),
@@ -31,6 +33,10 @@ export default function Home() {
   const { toast } = useToast();
   const [recommendation, setRecommendation] = useState<string | null>(null);
   const [prompt, setPrompt] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  
+  // Fetch recommendation stats
+  const { data: stats, error: statsError } = useSWR('/api/recommendations/stats');
 
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
@@ -48,9 +54,52 @@ export default function Home() {
   });
 
   const onSubmit = async (data: FormData) => {
-    const result = evaluateFramework(data);
-    setRecommendation(result.recommendation);
-    setPrompt(result.prompt);
+    setIsLoading(true);
+    try {
+      const result = evaluateFramework(data);
+      setRecommendation(result.recommendation);
+      setPrompt(result.prompt);
+
+      // Save recommendation to the database
+      const response = await fetch('/api/recommendations', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          projectType: data.projectType,
+          requirements: data.requirements,
+          recommendedFramework: result.recommendation.split(' ')[0], // Extract framework name
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to save recommendation');
+      }
+
+      // Invalidate stats cache
+      mutate('/api/recommendations/stats');
+
+      // Switch to recommendation tab after getting results
+      const tabsList = document.querySelector('[value="recommendation"]');
+      if (tabsList) {
+        (tabsList as HTMLElement).click();
+      }
+
+      toast({
+        title: "Success",
+        description: "Your recommendation has been generated and saved.",
+      });
+    } catch (error) {
+      console.error('Form submission error:', error);
+      toast({
+        title: "Error",
+        description: "Failed to generate recommendation. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const copyToClipboard = (text: string) => {
@@ -61,11 +110,27 @@ export default function Home() {
     });
   };
 
+  if (statsError) {
+    console.error('Failed to fetch stats:', statsError);
+  }
+
   return (
     <div className="container mx-auto py-8 max-w-3xl">
       <h1 className="text-4xl font-bold mb-8 bg-gradient-to-r from-primary to-purple-600 bg-clip-text text-transparent">
         Framework Choice Guide
       </h1>
+
+      {stats && (
+        <div className="mb-6 text-sm text-muted-foreground">
+          <p>Total recommendations: {stats.total}</p>
+          <p>Popular frameworks: {Object.entries(stats.byFramework)
+            .sort(([,a], [,b]) => (b as number) - (a as number))
+            .slice(0, 3)
+            .map(([framework]) => framework)
+            .join(', ')}
+          </p>
+        </div>
+      )}
 
       <Tabs defaultValue="form" className="w-full">
         <TabsList className="grid w-full grid-cols-2">
@@ -134,8 +199,82 @@ export default function Home() {
                   )}
                 />
 
-                <Button type="submit" className="w-full">
-                  Get Recommendation
+                <div className="space-y-4">
+                  <h3 className="font-medium">Project Requirements</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="requirements.performance"
+                      render={({ field }) => (
+                        <FormItem className="flex items-center space-x-2">
+                          <FormControl>
+                            <Checkbox
+                              checked={field.value}
+                              onCheckedChange={field.onChange}
+                            />
+                          </FormControl>
+                          <FormLabel className="text-sm font-normal">
+                            High Performance
+                          </FormLabel>
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="requirements.scalability"
+                      render={({ field }) => (
+                        <FormItem className="flex items-center space-x-2">
+                          <FormControl>
+                            <Checkbox
+                              checked={field.value}
+                              onCheckedChange={field.onChange}
+                            />
+                          </FormControl>
+                          <FormLabel className="text-sm font-normal">
+                            Scalability
+                          </FormLabel>
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="requirements.easeOfUse"
+                      render={({ field }) => (
+                        <FormItem className="flex items-center space-x-2">
+                          <FormControl>
+                            <Checkbox
+                              checked={field.value}
+                              onCheckedChange={field.onChange}
+                            />
+                          </FormControl>
+                          <FormLabel className="text-sm font-normal">
+                            Ease of Use
+                          </FormLabel>
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="requirements.ecosystem"
+                      render={({ field }) => (
+                        <FormItem className="flex items-center space-x-2">
+                          <FormControl>
+                            <Checkbox
+                              checked={field.value}
+                              onCheckedChange={field.onChange}
+                            />
+                          </FormControl>
+                          <FormLabel className="text-sm font-normal">
+                            Rich Ecosystem
+                          </FormLabel>
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                </div>
+
+                <Button type="submit" className="w-full" disabled={isLoading}>
+                  {isLoading ? "Generating..." : "Get Recommendation"}
                 </Button>
               </form>
             </Form>
@@ -155,7 +294,7 @@ export default function Home() {
                   <div>
                     <h3 className="text-2xl font-semibold mb-2">Replit Agent Prompt</h3>
                     <div className="relative">
-                      <pre className="bg-gray-100 p-4 rounded-lg">{prompt}</pre>
+                      <pre className="bg-gray-100 p-4 rounded-lg whitespace-pre-wrap">{prompt}</pre>
                       <Button
                         variant="outline"
                         size="icon"
